@@ -1,0 +1,102 @@
+name: project_pilot
+version: 0.1.0
+paper:
+  title: "PiLoT: Neural Pixel-to-3D Registration for UAV-based Ego and Target Geo-localization"
+  arxiv: "2603.20778"
+  authors:
+    - Xiaoya Cheng
+    - Long Wang
+    - Yan Liu
+    - Xinyi Liu
+    - Hanlin Tan
+    - Yu Liu
+    - Maojun Zhang
+    - Shen Yan
+  project_page: "https://nudt-sawlab.github.io/PiLoT/"
+
+domain: defense
+category: uav-localization
+wave: 9
+
+capabilities:
+  - uav-ego-localization
+  - target-geo-localization
+  - gnss-denied-navigation
+  - pixel-to-3d-registration
+
+backbone: mobileone-s0
+framework: pytorch
+
+hardware:
+  training: "8x RTX 4090 (paper) / 8x L4 (ours)"
+  inference: "NVIDIA Jetson Orin / L4"
+  vram_estimate_gb: 10
+
+datasets:
+  training:
+    - name: pilot_synthetic
+      size: "1.1M images"
+      path: /mnt/forge-data/datasets/pilot_synthetic/
+  evaluation:
+    - name: synthcity6
+      path: /mnt/forge-data/datasets/synthcity6/
+    - name: uavscenes
+      path: /mnt/forge-data/datasets/uavscenes/
+    - name: uavd4l_2yr
+      path: /mnt/forge-data/datasets/uavd4l_2yr/
+    - name: uavd4l_syntarget
+      path: /mnt/forge-data/datasets/uavd4l_syntarget/
+
+models:
+  pretrained:
+    - name: mobileone_s0
+      source: "apple/ml-mobileone"
+      path: /mnt/forge-data/models/mobileone_s0.pth
+
+metrics:
+  - median_translation_error_m
+  - median_rotation_error_deg
+  - recall_at_1m
+  - recall_at_3m
+  - recall_at_5m
+  - completeness_pct
+  - fps
+
+api:
+  port: 8080
+  endpoints:
+    - path: /predict
+      method: POST
+      description: "6-DoF pose from query frame + 3D map reference"
+    - path: /health
+      method: GET
+    - path: /ready
+      method: GET
+    - path: /info
+      method: GET
+
+docker:
+  base_image: "ghcr.io/robotflow-labs/anima-serve:jazzy"
+  serve_file: "src/pilot/serve.py"
+  compose_file: "docker-compose.serve.yml"
+
+ros2:
+  package: pilot
+  node: PiLoTNode
+  topics:
+    subscribers:
+      - name: /camera/image_raw
+        type: sensor_msgs/msg/Image
+    publishers:
+      - name: /pilot/pose
+        type: geometry_msgs/msg/PoseStamped
+      - name: /pilot/target_location
+        type: geometry_msgs/msg/PointStamped
+
+artifacts:
+  checkpoints: /mnt/artifacts-datai/checkpoints/project_pilot/
+  logs: /mnt/artifacts-datai/logs/project_pilot/
+  exports: /mnt/artifacts-datai/exports/project_pilot/
+  tensorboard: /mnt/artifacts-datai/tensorboard/project_pilot/
+
+hf_repo: ilessio-aiflowlab/project_pilot

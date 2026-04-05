@@ -1,0 +1,83 @@
+# PiLoT paper-exact reproduction config
+# Paper: arXiv 2603.20778
+
+[model]
+backbone = "mobileone_s0"
+backbone_depth = 3
+backbone_pretrained = true
+backbone_weights = "/mnt/forge-data/models/mobileone_s0.pth"
+decoder = "unet"
+feature_channels = 32            # C = 32 base channel width
+pyramid_channels = [128, 64, 32] # coarse (1/4), mid (1/2), fine (1x)
+uncertainty_heads = true
+
+[jngo]
+num_hypotheses = 144             # M = 144
+pitch_range_deg = 11.0           # +/- 11 degrees
+yaw_range_deg = 11.0             # +/- 11 degrees
+angle_step_deg = 2.0             # 2 degree steps
+translation_std = 1.0            # N(0, 1) meters
+lm_iterations_coarse = 2
+lm_iterations_mid = 3
+lm_iterations_fine = 4
+num_geo_anchors = 500            # N = 500
+
+[training]
+batch_size = "auto"
+learning_rate = 1e-3
+optimizer = "adam"
+weight_decay = 0.0
+epochs = 30
+precision = "bf16"
+gradient_accumulation = 1
+max_grad_norm = 1.0
+seed = 42
+
+[training.augmentation]
+fourier_noise = true
+photometric_jitter = true
+pose_noise_translation_m = [5.0, 15.0]  # uniform range
+pose_noise_rotation_deg = [5.0, 15.0]   # uniform range
+
+[scheduler]
+type = "warmup_cosine"
+warmup_ratio = 0.05
+min_lr = 1e-6
+
+[data]
+train_path = "/mnt/forge-data/datasets/pilot_synthetic/"
+val_path = "/mnt/forge-data/datasets/pilot_synthetic/"
+image_height = 1200
+image_width = 1600
+inference_short_side = 512
+num_workers = 4
+pin_memory = true
+train_split = 0.9
+val_split = 0.05
+test_split = 0.05
+
+[checkpoint]
+output_dir = "/mnt/artifacts-datai/checkpoints/project_pilot"
+save_every_n_steps = 500
+keep_top_k = 2
+metric = "val_loss"
+mode = "min"
+
+[early_stopping]
+enabled = true
+patience = 10
+min_delta = 1e-4
+
+[logging]
+log_dir = "/mnt/artifacts-datai/logs/project_pilot"
+tensorboard_dir = "/mnt/artifacts-datai/tensorboard/project_pilot"
+
+[loss]
+type = "barron_robust"
+barron_alpha = 0.0               # Barron loss shape (0 = Cauchy-like)
+barron_scale = 1.0
+motion_lambda = 1.0              # weight for SE(3) motion regularization
+
+[evaluation]
+recall_thresholds_m = [1.0, 3.0, 5.0]
+recall_thresholds_deg = [1.0, 3.0, 5.0]

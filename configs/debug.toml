@@ -1,0 +1,83 @@
+# PiLoT debug / smoke-test config
+# Quick validation: 2 epochs, small batch, minimal data
+
+[model]
+backbone = "mobileone_s0"
+backbone_depth = 3
+backbone_pretrained = false
+backbone_weights = ""
+decoder = "unet"
+feature_channels = 32
+pyramid_channels = [128, 64, 32]
+uncertainty_heads = true
+
+[jngo]
+num_hypotheses = 16              # reduced from 144
+pitch_range_deg = 11.0
+yaw_range_deg = 11.0
+angle_step_deg = 6.0             # coarser grid
+translation_std = 1.0
+lm_iterations_coarse = 1
+lm_iterations_mid = 1
+lm_iterations_fine = 1
+num_geo_anchors = 50             # reduced from 500
+
+[training]
+batch_size = 2
+learning_rate = 1e-3
+optimizer = "adam"
+weight_decay = 0.0
+epochs = 2
+precision = "fp32"
+gradient_accumulation = 1
+max_grad_norm = 1.0
+seed = 42
+
+[training.augmentation]
+fourier_noise = false
+photometric_jitter = false
+pose_noise_translation_m = [5.0, 15.0]
+pose_noise_rotation_deg = [5.0, 15.0]
+
+[scheduler]
+type = "warmup_cosine"
+warmup_ratio = 0.05
+min_lr = 1e-6
+
+[data]
+train_path = "/mnt/forge-data/datasets/pilot_synthetic/"
+val_path = "/mnt/forge-data/datasets/pilot_synthetic/"
+image_height = 240
+image_width = 320
+inference_short_side = 128
+num_workers = 2
+pin_memory = false
+train_split = 0.9
+val_split = 0.05
+test_split = 0.05
+
+[checkpoint]
+output_dir = "/mnt/artifacts-datai/checkpoints/project_pilot_debug"
+save_every_n_steps = 10
+keep_top_k = 1
+metric = "val_loss"
+mode = "min"
+
+[early_stopping]
+enabled = false
+patience = 5
+min_delta = 1e-4
+
+[logging]
+log_dir = "/mnt/artifacts-datai/logs/project_pilot_debug"
+tensorboard_dir = "/mnt/artifacts-datai/tensorboard/project_pilot_debug"
+
+[loss]
+type = "barron_robust"
+barron_alpha = 0.0
+barron_scale = 1.0
+motion_lambda = 1.0
+
+[evaluation]
+recall_thresholds_m = [1.0, 3.0, 5.0]
+recall_thresholds_deg = [1.0, 3.0, 5.0]

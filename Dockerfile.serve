@@ -1,0 +1,36 @@
+# PiLoT Serving Dockerfile
+# 3-layer build: anima-base -> anima-serve -> pilot
+FROM ghcr.io/robotflow-labs/anima-serve:jazzy AS base
+
+# Layer 3: PiLoT module
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml ./
+COPY src/ ./src/
+COPY configs/ ./configs/
+
+# Install dependencies
+RUN uv pip install --system --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
+    uv pip install --system --no-cache-dir timm numpy opencv-python scipy pyproj && \
+    uv pip install --system --no-cache-dir -e .
+
+# Weight directory (downloaded at runtime from HF)
+ENV ANIMA_WEIGHT_DIR=/data/weights
+RUN mkdir -p /data/weights
+
+# Module identity
+ENV ANIMA_MODULE_NAME=pilot
+ENV ANIMA_MODULE_VERSION=0.1.0
+ENV ANIMA_HF_REPO=ilessio-aiflowlab/project_pilot
+ENV ANIMA_SERVE_PORT=8080
+
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Entry point
+CMD ["python", "-m", "anima_serve.cli", "--module", "pilot.serve:PiLoTNode", "--port", "8080"]

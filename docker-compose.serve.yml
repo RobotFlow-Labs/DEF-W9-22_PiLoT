@@ -1,0 +1,79 @@
+version: "3.8"
+
+services:
+  pilot-serve:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+    profiles: ["serve"]
+    env_file: .env.serve
+    ports:
+      - "${ANIMA_SERVE_PORT:-8080}:8080"
+    volumes:
+      - pilot-weights:/data/weights
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    network_mode: host
+    restart: unless-stopped
+
+  pilot-ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+    profiles: ["ros2"]
+    env_file: .env.serve
+    environment:
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - pilot-weights:/data/weights
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    network_mode: host
+    restart: unless-stopped
+    command: >
+      python -m anima_serve.cli
+      --module pilot.serve:PiLoTNode
+      --port 8080
+      --ros2
+
+  pilot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+    profiles: ["api"]
+    env_file: .env.serve
+    ports:
+      - "${ANIMA_SERVE_PORT:-8080}:8080"
+    volumes:
+      - pilot-weights:/data/weights
+    restart: unless-stopped
+    command: >
+      python -m anima_serve.cli
+      --module pilot.serve:PiLoTNode
+      --port 8080
+      --api-only
+
+  pilot-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+    profiles: ["test"]
+    env_file: .env.serve
+    volumes:
+      - .:/app
+    command: >
+      python -m pytest tests/ -x -v
+
+volumes:
+  pilot-weights:
