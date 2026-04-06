@@ -64,7 +64,7 @@ metric = "val_loss"
 mode = "min"
 
 [early_stopping]
-enabled = true
+enabled = false
 patience = 10
 min_delta = 1e-4
 
